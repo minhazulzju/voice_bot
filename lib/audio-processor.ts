@@ -5,6 +5,14 @@ export class AudioProcessor {
   private outputAudioContext: AudioContext;
   private audioQueue: Float32Array[] = [];
   private isPlaying = false;
+  
+  // Silence detection properties
+  private silenceThreshold: number = 0.08; // Amplitude threshold for silence (lower threshold = wait for stronger silence)
+  private silenceDuration: number = 3500; // 3.5 seconds of silence to trigger end (give user more time)
+  private lastSoundTime: number = 0;
+  private hasDetectedSound: boolean = false; // Only start counting silence after first sound
+  private onSilenceDetected?: () => void;
+  private silenceCheckIntervalId?: number;
 
   constructor() {
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -16,6 +24,8 @@ export class AudioProcessor {
     this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
       sampleRate: 24000,
     });
+    
+    this.lastSoundTime = Date.now();
   }
 
   connectMediaStream(stream: MediaStream) {
@@ -50,6 +60,47 @@ export class AudioProcessor {
   detectVoiceActivity(threshold: number = 0.1): boolean {
     const intensity = this.getAudioIntensity();
     return intensity > threshold;
+  }
+
+  /**
+   * Start monitoring for silence. When extended silence is detected after initial sound, the callback is triggered.
+   * Only counts silence AFTER the first sound is detected to avoid triggering on startup noise.
+   */
+  startSilenceDetection(callback: () => void, threshold: number = 0.03, duration: number = 5000) {
+    this.onSilenceDetected = callback;
+    this.silenceThreshold = threshold;
+    this.silenceDuration = duration;
+    this.lastSoundTime = Date.now();
+    this.hasDetectedSound = false; // Reset - wait for first sound before counting silence
+
+    // Check every 150ms for silence condition (less frequent = less aggressive)
+    this.silenceCheckIntervalId = window.setInterval(() => {
+      const intensity = this.getAudioIntensity();
+
+      if (intensity > this.silenceThreshold) {
+        // Sound detected
+        this.hasDetectedSound = true; // Mark that we've detected speech
+        this.lastSoundTime = Date.now(); // Reset silence timer
+      } else if (this.hasDetectedSound) {
+        // Silence detected, but only count it after we've already detected sound
+        const silenceTime = Date.now() - this.lastSoundTime;
+        if (silenceTime >= this.silenceDuration) {
+          console.log(`Extended silence detected for ${silenceTime}ms after speech, triggering end of recording`);
+          this.stopSilenceDetection();
+          this.onSilenceDetected?.();
+        }
+      }
+    }, 150);
+  }
+
+  /**
+   * Stop monitoring for silence.
+   */
+  stopSilenceDetection() {
+    if (this.silenceCheckIntervalId !== undefined) {
+      clearInterval(this.silenceCheckIntervalId);
+      this.silenceCheckIntervalId = undefined;
+    }
   }
 
   // Play received audio from OpenAI
@@ -107,6 +158,7 @@ export class AudioProcessor {
   }
 
   close() {
+    this.stopSilenceDetection();
     if (this.audioContext.state !== 'closed') {
       this.audioContext.close();
     }

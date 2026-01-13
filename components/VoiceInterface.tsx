@@ -177,6 +177,10 @@ export default function VoiceInterface() {
       animationFrameRef.current = requestAnimationFrame(updateIntensity);
     };
     updateIntensity();
+
+    // NOTE: Disabled custom silence detection - relying on Web Speech API's built-in 
+    // end-of-speech detection which works better for natural conversation flow
+    // The Web Speech API automatically detects when user finishes speaking
   };
 
   const getPhaseNumber = (): number => {
