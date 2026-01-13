@@ -28,7 +28,7 @@ export class AudioProcessor {
   }
 
   getAudioIntensity(): number {
-    this.analyser.getByteFrequencyData(this.dataArray);
+    this.analyser.getByteFrequencyData(this.dataArray as Uint8Array);
     
     // Calculate RMS (Root Mean Square) for overall intensity
     let sum = 0;
