@@ -1,7 +1,7 @@
 export class AudioProcessor {
   private audioContext: AudioContext;
   private analyser: AnalyserNode;
-  private dataArray: Uint8Array;
+  private dataArray: Uint8Array<ArrayBuffer>;
   private outputAudioContext: AudioContext;
   private audioQueue: Float32Array[] = [];
   private isPlaying = false;
