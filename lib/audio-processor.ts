@@ -11,7 +11,7 @@ export class AudioProcessor {
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.8;
-    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+    this.dataArray = new Uint8Array(new ArrayBuffer(this.analyser.frequencyBinCount));
     
     this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
       sampleRate: 24000,
