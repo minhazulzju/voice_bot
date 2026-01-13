@@ -1,7 +1,7 @@
 export class AudioProcessor {
   private audioContext: AudioContext;
   private analyser: AnalyserNode;
-  private dataArray: Uint8Array;
+  private dataArray: Uint8Array<ArrayBuffer>;
   private outputAudioContext: AudioContext;
   private audioQueue: Float32Array[] = [];
   private isPlaying = false;
@@ -11,7 +11,7 @@ export class AudioProcessor {
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.8;
-    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount) as unknown as Uint8Array<ArrayBuffer>;
     
     this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
       sampleRate: 24000,
@@ -28,7 +28,7 @@ export class AudioProcessor {
   }
 
   getAudioIntensity(): number {
-    this.analyser.getByteFrequencyData(this.dataArray as Uint8Array);
+    this.analyser.getByteFrequencyData(this.dataArray);
     
     // Calculate RMS (Root Mean Square) for overall intensity
     let sum = 0;
