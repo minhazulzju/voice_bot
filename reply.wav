@@ -1,0 +1,1 @@
+{"detail":"TextToAudioPipeline._sanitize_parameters() got an unexpected keyword argument 'speaker_embeddings'"}

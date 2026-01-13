@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cyber-blue: #00d9ff;
+  --cyber-purple: #b800ff;
+  --cyber-pink: #ff00ff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #000000;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+.glassmorphic {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glow-text {
+  text-shadow: 0 0 10px var(--cyber-blue),
+               0 0 20px var(--cyber-blue),
+               0 0 30px var(--cyber-blue);
+}
+
+.pulse-ring {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Brightness slider styling */
+.brightness-slider {
+  -webkit-appearance: none;
+  width: 140px;
+  height: 6px;
+  background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-purple));
+  border-radius: 999px;
+  outline: none;
+}
+.brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,255,255,0.9);
+}
+.brightness-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(255,255,255,0.9);
+}
+
+/* Top bar and control button styles */
+.control-button {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: radial-gradient(closest-side, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.control-button:active {
+  transform: scale(0.98);
+}
