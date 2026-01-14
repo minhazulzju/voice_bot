@@ -260,12 +260,6 @@ export default function VoiceInterface() {
           />
         </EffectComposer>
       </Canvas>
-
-      {/* Subtitles and Feedback */}
-      <div className="absolute bottom-4 w-full text-center text-black"> {/* Changed text color to black for visibility */}
-        <p className="text-lg font-semibold">{userSubtitle}</p>
-        <p className="text-sm text-gray-600 mt-2">{assistantFeedback}</p>
-      </div>
     </div>
   );
 }
