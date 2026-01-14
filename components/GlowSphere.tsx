@@ -15,6 +15,7 @@ export default function GlowSphere({ audioIntensity, phase, brightness = 1.0 }: 
   const meshRef = useRef<THREE.Mesh>(null);
   const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const timeRef = useRef(0);
 
   const uniforms = useMemo(
     () => ({
@@ -32,6 +33,8 @@ export default function GlowSphere({ audioIntensity, phase, brightness = 1.0 }: 
   );
 
   useFrame((state) => {
+    timeRef.current = state.clock.elapsedTime;
+    
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
       materialRef.current.uniforms.uAudioIntensity.value = THREE.MathUtils.lerp(
@@ -57,10 +60,25 @@ export default function GlowSphere({ audioIntensity, phase, brightness = 1.0 }: 
       meshRef.current.rotation.x += 0.0012;
     }
 
-    // Always scale the whole orb based on audio intensity (no position movement)
+    // Siri-like breathing effect
     if (groupRef.current) {
-      const tScale = 1 + audioIntensity * 0.9; // responsive scale: louder -> bigger
-      groupRef.current.scale.lerp(new THREE.Vector3(tScale, tScale, tScale), 0.12);
+      let targetScale = 1;
+
+      if (phase === 1) {
+        // Listening mode: subtle breathing animation (Siri-style)
+        // Gentle pulse even without audio, plus reactive response to voice
+        const breathingPulse = 1 + Math.sin(timeRef.current * 2.5) * 0.15; // Slow breathing
+        const audioReactive = audioIntensity * 1.5; // Voice reactivity
+        targetScale = breathingPulse + audioReactive;
+      } else if (phase === 0) {
+        // Idle: completely stable, no animation
+        targetScale = 1;
+      } else {
+        // Processing/speaking: responsive to audio
+        targetScale = 1 + audioIntensity * 1.5;
+      }
+
+      groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.18);
     }
   });
 

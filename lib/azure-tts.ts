@@ -30,13 +30,16 @@ export class AzureTTSClient {
       });
       if (!res.ok) {
         const err = await res.text();
-        throw new Error(`Azure TTS route error: ${res.status} ${err}`);
+        console.warn(`Azure TTS route error: ${res.status} ${err}. Falling back to browser SpeechSynthesis.`);
+        await this.fallbackSpeak(text);
+        return;
       }
       const audioBuffer = await res.arrayBuffer();
       await this.playAudio(audioBuffer);
     } catch (e) {
       console.error('Azure TTS failed:', e);
-      throw e;
+      // Fallback to browser speech synthesis so the app keeps speaking
+      await this.fallbackSpeak(text);
     }
   }
 
@@ -64,5 +67,30 @@ export class AzureTTSClient {
       this.audioContext.close();
       this.audioContext = null;
     }
+  }
+
+  private async fallbackSpeak(text: string): Promise<void> {
+    const synth: SpeechSynthesis | undefined = (window as any).speechSynthesis;
+    if (!synth) {
+      console.error('SpeechSynthesis not supported in this browser. Unable to speak fallback.');
+      return;
+    }
+
+    const utter = new SpeechSynthesisUtterance(text);
+    // Try to select a matching voice if available
+    try {
+      const voices = synth.getVoices();
+      const match = voices.find(v => v.name === this.voiceName) || voices.find(v => v.lang.startsWith('en')) || voices[0];
+      if (match) utter.voice = match;
+    } catch {}
+    utter.lang = 'en-US';
+    utter.rate = 1.0;
+    utter.pitch = 1.0;
+
+    await new Promise<void>((resolve) => {
+      utter.onend = () => resolve();
+      utter.onerror = () => resolve();
+      synth.speak(utter);
+    });
   }
 }

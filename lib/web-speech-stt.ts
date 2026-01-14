@@ -45,10 +45,10 @@ export class WebSpeechSTTClient {
   private setupRecognition() {
     if (!this.recognition) return;
 
-    // Key: NOT continuous. Stop after each final transcript so we only respond once per user input.
-    this.recognition.continuous = false;
-    // Disable interim results to avoid showing inaccurate partial transcripts.
-    this.recognition.interimResults = false;
+    // Enable continuous listening - keep recognizing multiple utterances
+    this.recognition.continuous = true;
+    // Enable interim results to show partial transcripts as user speaks
+    this.recognition.interimResults = true;
     // Ask for multiple alternatives to improve final accuracy when available.
     try {
       this.recognition.maxAlternatives = 5;
@@ -64,18 +64,33 @@ export class WebSpeechSTTClient {
     };
 
     this.recognition.onresult = (event: any) => {
-      // With interimResults disabled, results should be final when onresult fires.
-      let collected = '';
+      // Collect all transcripts, marking final vs interim
+      let finalTranscript = '';
+      let interimTranscript = '';
+      
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        collected += event.results[i][0].transcript + ' ';
+        const transcript = event.results[i][0].transcript;
+        
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript + ' ';
+        }
       }
 
-      const text = collected.trim();
-      const isFinal = true;
+      const finalText = finalTranscript.trim();
+      const interimText = interimTranscript.trim();
+      
+      // Send interim results as user speaks
+      if (interimText) {
+        console.log('Web Speech interim transcript:', interimText);
+        this.onTranscript(interimText, false);
+      }
 
-      if (text) {
-        console.log('Web Speech final transcript:', { text, isFinal });
-        this.onTranscript(text, isFinal);
+      // Send final results when sentence ends
+      if (finalText) {
+        console.log('Web Speech final transcript:', finalText);
+        this.onTranscript(finalText, true);
       }
     };
 
@@ -103,9 +118,11 @@ export class WebSpeechSTTClient {
       });
 
       console.log('Microphone access granted');
+      console.log(`Starting recognition with language: ${this.language}`);
 
       // Start recognition
       if (this.recognition) {
+        this.recognition.lang = this.language; // Ensure language is set
         this.recognition.start();
       }
     } catch (error) {

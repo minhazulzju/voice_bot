@@ -6,7 +6,7 @@ import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import GlowSphere from './GlowSphere';
 import { WebSpeechSTTClient } from '@/lib/web-speech-stt';
 import { AudioProcessor } from '@/lib/audio-processor';
-import { generateReply } from '@/lib/text-generation';
+import { generateReply, detectLanguage } from '@/lib/text-generation';
 import { AzureTTSClient } from '@/lib/azure-tts';
 
 type Phase = 'idle' | 'listening' | 'processing' | 'speaking';
@@ -64,9 +64,10 @@ export default function VoiceInterface() {
     setConnectionStatus('connecting');
 
     audioProcessorRef.current = new AudioProcessor();
-    // Azure TTS runs via our server route; no client secret required
+    
+    // Initialize TTS with both voices available - will select based on response language
     ttsClientRef.current = new AzureTTSClient({
-      voiceName: 'en-US-JennyNeural',
+      voiceName: 'en-US-JennyNeural', // Default to English
       outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
     });
 
@@ -75,6 +76,7 @@ export default function VoiceInterface() {
       onOpen: () => setConnectionStatus('connected'),
       onError: handleError,
       onClose: () => setConnectionStatus('disconnected'),
+      language: 'en-US', // Web Speech API will auto-detect, but allow both
     });
 
     clientRef.current = client;
@@ -127,7 +129,7 @@ export default function VoiceInterface() {
     try {
       console.log('Generating empathetic reply for:', userText);
       setIsGenerating(true);
-      const reply = await generateReply({ prompt: userText });
+      const reply = await generateReply({ prompt: userText }); // Auto-detects language
 
       console.log('Got reply:', reply);
       setAssistantFeedback(reply); // Update assistant feedback
@@ -136,7 +138,17 @@ export default function VoiceInterface() {
       if (ttsClientRef.current) {
         setPhase('speaking');
         try {
-          console.log('Starting TTS...');
+          // Auto-detect response language and set appropriate voice
+          const responseLanguage = detectLanguage(reply);
+          const voiceName = responseLanguage === 'zh-CN' ? 'zh-CN-YunyangNeural' : 'en-US-JennyNeural';
+          
+          // Update TTS client with the correct voice
+          ttsClientRef.current = new AzureTTSClient({
+            voiceName,
+            outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
+          });
+          
+          console.log(`Starting TTS with ${responseLanguage} voice (${voiceName})...`);
           await ttsClientRef.current.synthesizeAndPlay(reply);
           console.log('TTS completed, restarting listening');
         } catch (error) {
@@ -202,15 +214,25 @@ export default function VoiceInterface() {
   };
 
   useEffect(() => {
-    // Remember the last *listening* phase so we can keep visuals stable during processing/speaking
+    // Dramatically increase bloom and brightness when user is talking
     if (phase === 'listening') {
+      // Dynamic bloom based on audio intensity (much stronger effect)
+      const dynamicBloom = 1.5 + audioIntensity * 4.5; // Range: 1.5 to 6.0
+      const dynamicBrightness = 1.0 + audioIntensity * 2.0; // Range: 1.0 to 3.0
+      
+      setBrightness(dynamicBrightness);
+      setBloom(dynamicBloom);
+      
       prevVisualPhaseRef.current = phase;
-      // capture audio intensity and visual settings while listening for freezing during processing/speaking
       lastListeningAudioRef.current = audioIntensity;
-      lastListeningBrightnessRef.current = brightness;
-      lastListeningBloomRef.current = bloom;
+      lastListeningBrightnessRef.current = dynamicBrightness;
+      lastListeningBloomRef.current = dynamicBloom;
+    } else {
+      // Idle or processing: subtle glow
+      setBrightness(1.0);
+      setBloom(1.0);
     }
-  }, [phase, audioIntensity, brightness, bloom]);
+  }, [phase, audioIntensity]);
 
   // Auto-scroll transcripts container so newest (top) message is visible
   useEffect(() => {
@@ -239,7 +261,7 @@ export default function VoiceInterface() {
   const effectiveBloom = (phase === 'speaking' || phase === 'processing') ? lastListeningBloomRef.current : bloom;
 
   return (
-    <div className="w-full h-screen bg-white relative"> {/* Changed background to white */}
+    <div className="w-full h-screen bg-white relative">
       <Canvas
         camera={{ position: [0, 0, 8], fov: 50 }}
         gl={{ antialias: true, alpha: true }}
@@ -254,9 +276,10 @@ export default function VoiceInterface() {
         <EffectComposer>
           <Bloom
             intensity={effectiveBloom}
-            luminanceThreshold={0.08}
-            luminanceSmoothing={0.8}
-            height={300}
+            luminanceThreshold={0.05}
+            luminanceSmoothing={0.6}
+            height={400}
+            radius={0.85}
           />
         </EffectComposer>
       </Canvas>

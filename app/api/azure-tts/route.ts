@@ -16,8 +16,12 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: 'Missing "text" in request body' }), { status: 400 });
     }
 
-    const region = getEnv('AZURE_SPEECH_REGION', 'eastasia');
-    const key = getEnv('AZURE_SPEECH_KEY');
+    // Trim to avoid accidental whitespace in .env causing 401
+    const region = getEnv('AZURE_SPEECH_REGION', 'eastasia').trim();
+    const key = getEnv('AZURE_SPEECH_KEY').trim();
+    if (!region || !key) {
+      return new Response(JSON.stringify({ error: 'Missing Azure Speech region or key' }), { status: 400 });
+    }
 
     // Issue token (valid ~10 minutes)
     const tokenRes = await fetch(`https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, {
